@@ -1,7 +1,9 @@
 from collections import defaultdict
 
 class TSP:
-
+    """
+    TSP's solution with Cristofides algorithm.
+    """
     dists = []
     vertex_queue = {}
 
@@ -23,6 +25,9 @@ class TSP:
         return current_city
 
     def find_MST(self):
+        """
+        Find minimum spanning tree in init graph.
+        """
         new_city = self._extract_min()
         MST_graph = list()
         MST_nodes = list()
@@ -40,10 +45,13 @@ class TSP:
             MST_graph.append( (node[1]["parent"], node[0]) )
         return MST_graph
 
-    def find_odd_nodes(self, MST_graph):
+    def find_odd_nodes(self, MST):
+        """
+        Find all nodes with odd degree in MST.
+        """
         odd_nodes = list()
         adjacent_edges_count = defaultdict(int)
-        for from_node, to_node in MST_graph:
+        for from_node, to_node in MST:
             adjacent_edges_count[from_node] += 1
             adjacent_edges_count[to_node] += 1
         for node_id, count in adjacent_edges_count.iteritems():
@@ -58,6 +66,9 @@ class TSP:
         return sum_cost
 
     def _min_perfect_matching(self, chosen_edges, nodes):
+        """
+        Aux. Recursive search for minimum perfect matching.
+        """
         if len(nodes) == 2:
             chosen_edges.append((nodes[0], nodes[1]))
             cost = self._calc_cost_of_edges(chosen_edges)
@@ -76,12 +87,18 @@ class TSP:
                 chosen_edges.pop()
 
     def find_minimum_perfect_matching(self, nodes):
+        """
+        Find edges that compose perfect matching.
+        """
         self.min_cost = 10**6
         self.edges = list()
         self._min_perfect_matching([], nodes)
         return self.edges
 
     def extend_MST_with_perfect_matchings(self, MST):
+        """
+        Merge edges from MST and minimum perfect matching.
+        """
         odd_nodes = self.find_odd_nodes(MST)
         perfect_matching_edges = self.find_minimum_perfect_matching(odd_nodes)
         MST.extend(perfect_matching_edges)
@@ -97,12 +114,13 @@ class TSP:
 
     def find_euler_circuit(self, edges):
         path = [0]
+        neighbor = None
         while len(edges):
             for node in path:
-                if self._get_first_neighbor(node, edges):
-                    break
-            while self._get_first_neighbor(node, edges):
                 neighbor = self._get_first_neighbor(node, edges)
+                if neighbor:
+                    break
+            while neighbor:
                 try:
                     edges.remove( (node, neighbor) )
                 except ValueError:
@@ -112,10 +130,58 @@ class TSP:
                 else:
                     path.append(neighbor)
                 node = neighbor
+                neighbor = self._get_first_neighbor(node, edges)
         return path
+
+    def hamiltonize_path(self, path):
+        """
+        "Shortcut" nodes that were already visited.
+        """
+        hamilton_cycle = []
+        start = path[0]
+        for node in path:
+            if node == start or not node in hamilton_cycle:
+                hamilton_cycle.append(node)
+        return hamilton_cycle
+
+    def calc_path_cost(self, path):
+        """
+        Total cost of path.
+        """
+        cost = 0
+        for node in path[1:]:
+            cost += self.dists[node][node-1]
+        return cost
 
 if __name__ == "__main__":
     inst = TSP(15)
-    MST_graph = inst.find_MST()
-    extended_MST = inst.extend_MST_with_perfect_matchings(MST_graph)
+    MST = inst.find_MST()
+    extended_MST = inst.extend_MST_with_perfect_matchings(MST)
     euler_path = inst.find_euler_circuit(extended_MST)
+    hamilton_cycle = inst.hamiltonize_path(euler_path)
+    cost = inst.calc_path_cost(hamilton_cycle)
+    print "###############################\n" + \
+          "##      TSP: solution        ##\n" + \
+          "###############################\n"
+    print "->".join([str(node+1) for node in hamilton_cycle])
+    print "Total cost: %d" % cost
+    broken_salesman = """
+           .---
+          / # o
+          \,__>
+       .o-'-'--._
+      / |\_      '.
+     |  |  \   -,\\
+     \  /   \__| ) |
+      '|_____[)) |,/
+         |===H=|\ >>
+         \  __,| \_\\
+          \/   \  \_\\
+          |\    |  \/
+          | \   \   \\
+          |  \   |   \\
+          |__|\ ,-ooD \\
+          |--\\_(\\.-'   \\o
+    snd   '-.__)
+    """
+    print broken_salesman
